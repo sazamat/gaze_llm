@@ -8,6 +8,9 @@ import xml.etree.ElementTree as ET
 import traceback
 import keyboard
 import time
+from groq import Groq
+import os
+import easygui
 
 #CHANGE THIS VALUE TO MATCH WITH CURRENT SCREEN SIZE.
 #TODO: Need to find a way to get screen size automatically
@@ -73,9 +76,11 @@ def getFixationfromString(gaze_data):
     pattern = r'FPOGX="([-+]?\d*\.\d+|\d+)"\s+FPOGY="([-+]?\d*\.\d+|\d+)"'
     # Use regex to find FPOGX and FPOGY values
     match = re.search(pattern, gaze_data)
+    FPOGX_FPOGY = []
     if match:
         FPOGX = float(match.group(1))
         FPOGY = float(match.group(2))
+
         return FPOGX, FPOGY
     else:
         return False,False
@@ -127,39 +132,85 @@ async def eyetracking_running(websocket, path):
                     while keyboard.is_pressed('q'):
                         pass 
                     print('Key Released')
-                    from groq import Groq
-                    import os
-
-                    os.environ['GROQ_API_KEY'] = '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'
                     
+
                     f = open(r"C:\Users\Azamat Sydykov\Downloads\websocket\response.txt", 'r', encoding="utf-8")
                     data = f.read()
                     dict_1 = eval(data)
                     if (dict_1["elementType"] == "img"):
-                        content = 'describe' + dict_1["url"]
-                    if (type(dict_1["content"] == str)):
-                        content = "short summary of" + dict_1["content"]
-                    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-                    completion = client.chat.completions.create(
-                        model="llama3-8b-8192",
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": content,
-                            },
-                        
-                        ],
-                        temperature=1,
-                        max_tokens=1024,
-                        top_p=1,
-                        stream=True,
-                        stop=None,
-                    )
-
-                    with open("output.txt", "w") as f:
+                        content = 'describe shortly what is on ' + dict_1["url"]
+                        os.environ['GROQ_API_KEY'] = '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'
+                        client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+                        completion = client.chat.completions.create(
+                            model="llama3-8b-8192",
+                            messages=[
+                                {
+                                    "role": "user",
+                                    "content": content
+                                },
+                                
+                            ],
+                            temperature=1,
+                            max_tokens=1024,
+                            top_p=1,
+                            stream=True,
+                            stop=None,
+                        )
+                        output = ""
                         for chunk in completion:
-                            output = chunk.choices[0].delta.content or ""
-                            f.write(output)
+                            output += chunk.choices[0].delta.content or ""
+
+                        easygui.msgbox(output, title="data processed")
+   
+                    elif (not any([True for k,v in dict_1.items() if type(v) == float]) and dict_1["elementType"] != "img"):
+                        if dict_1['url']:
+                            content = "short summary of text" + dict_1["content"] + "taking into account image" + dict_1["url"]
+                            os.environ['GROQ_API_KEY'] = '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'
+                            client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+                            completion = client.chat.completions.create(
+                                model="llama3-8b-8192",
+                                messages=[
+                                    {
+                                        "role": "user",
+                                        "content": content
+                                    },
+                                    
+                                ],
+                                temperature=1,
+                                max_tokens=1024,
+                                top_p=1,
+                                stream=True,
+                                stop=None,
+                            )
+                            output = ""
+                            for chunk in completion:
+                                output += chunk.choices[0].delta.content or ""
+
+                            easygui.msgbox(output, title="data processed")
+                        else:
+                            content = "short summary of text" + dict_1["content"]
+                            os.environ['GROQ_API_KEY'] = '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'
+                            client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+                            completion = client.chat.completions.create(
+                                model="llama3-8b-8192",
+                                messages=[
+                                    {
+                                        "role": "user",
+                                        "content": content
+                                    },
+                                    
+                                ],
+                                temperature=1,
+                                max_tokens=1024,
+                                top_p=1,
+                                stream=True,
+                                stop=None,
+                            )
+                            output = ""
+                            for chunk in completion:
+                                output += chunk.choices[0].delta.content or ""
+
+                            easygui.msgbox(output, title="data processed")
                     
                 
          
