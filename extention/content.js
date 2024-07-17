@@ -128,7 +128,8 @@ socket.onmessage = function(event) {
 	
 	// Get the element at the specified screen coordinates
     var element = getElementFromScreenCoordinates(screenX, screenY);
-    // Get computed styles
+   
+
 
 
 	//sendMessageToServer(mappedX, mappedY, "");
@@ -144,6 +145,8 @@ socket.onmessage = function(event) {
 
         // Get the type of element (tag name)
         var elementType = element.tagName.toLowerCase();
+    
+
        // Get computed styles
        var computedStyles = window.getComputedStyle(element);
        var styles = {
@@ -161,7 +164,11 @@ socket.onmessage = function(event) {
         } else if (elementType === 'a') {
             sendMessageToServer(content, element.href, elementType);
         } else {
+            if (element.querySelector('img')){
+                sendMessageToServer(content, element.querySelector('img').src, elementType, styles);
+            }
             sendMessageToServer(content, '', elementType, styles);
+
         }
 
         // Apply highlight effect to the new element
