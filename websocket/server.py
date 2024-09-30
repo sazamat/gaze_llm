@@ -10,7 +10,8 @@ import keyboard
 import time
 from groq import Groq
 import os
-import easygui
+import tkinter as tk
+from tkinter import messagebox
 
 #CHANGE THIS VALUE TO MATCH WITH CURRENT SCREEN SIZE.
 #TODO: Need to find a way to get screen size automatically
@@ -26,7 +27,8 @@ ADDRESS = (HOST, PORT)
 WEBSOCKET_PORT = 8080
 
 SLEEP_DURATION = 0.01 #second
-TIMEOUT = 0.1  #second
+TIMEOUT = 20  #second
+
 
 # Set to store processed messages
 #processed_messages = set()
@@ -84,9 +86,10 @@ def getFixationfromString(gaze_data):
         return FPOGX, FPOGY
     else:
         return False,False
-
+count = 0
 # This function connect with eyetracker server, get gaze position and forward it to websocket client, then receive web content from client
 async def eyetracking_running(websocket, path):
+    global count
     print("WebSocket connection established.")
     """Main function for eye tracking."""
     try:
@@ -99,6 +102,7 @@ async def eyetracking_running(websocket, path):
         server.send(b'<SET ID="ENABLE_SEND_POG_FIX" STATE="1" />\r\n')
         server.send(b'<SET ID="ENABLE_SEND_DATA" STATE="1" />\r\n')
 
+       
         # Continuously receive and send gaze data
         while True:
             # Receive XML data (1024 bytes)
@@ -120,97 +124,305 @@ async def eyetracking_running(websocket, path):
                 
                 #Receive response message from client
                 response = await asyncio.wait_for(websocket.recv(), timeout=TIMEOUT)
+                response_dict = eval(response)
+                
               
               
                 print("Response from client:", response)
-                
-                if keyboard.is_pressed('q'): 
-                    f = open("response.txt", "w",  encoding="utf-8")
-                    f.write(response + "\n")
-                    f.close()
-                    time.sleep(1)
-                    while keyboard.is_pressed('q'):
-                        pass 
-                    print('Key Released')
-                    
+                if keyboard.is_pressed('a'):
+                    if count == 0:
+                        while keyboard.is_pressed('a'):
+                            pass 
+                        print('Key Released')
+                        f = open("response.txt", "w",  encoding="utf-8")
+                        f.write(response + "\n")
+                        f.close()
+                        print(count)
+                        count = count + 1
+                        
+                    else:
+                        while keyboard.is_pressed('a'):
+                            pass 
+                        print('Key Released')
+                        with open(r"response.txt", 'a', encoding="utf-8") as f:
+                            f.write(response + '\n')
+                        print(count)
+                        count = count + 1
+                            
+                if keyboard.is_pressed('q'):
+                    if count == 0 or count == 1:
+                        f = open("response.txt", "w",  encoding="utf-8")
+                        f.write(response + "\n")
+                        f.close()
+                        time.sleep(1)
+                        while keyboard.is_pressed('q'):
+                            pass 
+                        print('Key Released')
+                        print(count)
+                        
 
-                    f = open(r"C:\Users\Azamat Sydykov\Downloads\websocket\response.txt", 'r', encoding="utf-8")
-                    data = f.read()
-                    dict_1 = eval(data)
-                    if (dict_1["elementType"] == "img"):
-                        content = 'describe shortly what is on ' + dict_1["url"]
-                        os.environ['GROQ_API_KEY'] = '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'
-                        client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-                        completion = client.chat.completions.create(
-                            model="llama3-8b-8192",
-                            messages=[
-                                {
-                                    "role": "user",
-                                    "content": content
-                                },
+                        f = open(r"C:\Users\Azamat Sydykov\Downloads\websocket\response.txt", 'r', encoding="utf-8")
+                        data = f.read()
+                        dict_1 = eval(data)
+                        
+                        # Set the API key and URL
+                        os.environ['GROQ_API_KEY'] = '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'
+                        
+
+                        class Application(tk.Tk):
+                            def __init__(self):
+                                super().__init__()
+                                self.title("Send to LLM")
+                                popup_width = 150
+                                popup_height = 150
+                                if 0 < abs(int(dict_1["borderX"])) - 100 < SCREENSIZE[0] - popup_width:
+                                    popup_x = abs(int(dict_1["borderX"])) - 100 + (popup_width - (abs(int(dict_1["borderX"])) - 100))
+                                elif abs(int(dict_1["borderX"])) - 100 > SCREENSIZE[0] - popup_width:
+                                    popup_x = abs(int(dict_1["borderX"])) - 100 - ((abs(int(dict_1["borderX"])) - 100) - (SCREENSIZE[0] - popup_width))
+                                else:
+                                    popup_x = (abs(int(dict_1["borderX"]))) 
+                                if 0 < abs(int(dict_1["borderY"])) - 100 < SCREENSIZE[1] - popup_width:
+                                    popup_y = (abs(int(dict_1["borderY"])) - 100) + (popup_height - (abs(int(dict_1["borderY"])) - 100))
+                                elif abs(int(dict_1["borderX"])) - 100 > SCREENSIZE[1] - popup_height:
+                                    popup_y = abs(int(dict_1["borderX"])) - 100 - ((abs(int(dict_1["borderY"])) - 100) - (SCREENSIZE[1] - popup_height))
+                                else:                                                   
+                                    popup_y = (abs(int(dict_1["borderY"]))) 
                                 
-                            ],
-                            temperature=1,
-                            max_tokens=1024,
-                            top_p=1,
-                            stream=True,
-                            stop=None,
-                        )
-                        output = ""
-                        for chunk in completion:
-                            output += chunk.choices[0].delta.content or ""
+                                self.geometry(f'{popup_width}x{popup_height}+{popup_x}+{popup_y}')
+                                self.focus_force()
+                                self.attributes("-topmost", True)
+                                self.action = tk.StringVar()
+                                self.action.set('summarize')
 
-                        easygui.msgbox(output, title="data processed")
-   
-                    elif (not any([True for k,v in dict_1.items() if type(v) == float]) and dict_1["elementType"] != "img"):
-                        if dict_1['url']:
-                            content = "short summary of text" + dict_1["content"] + "taking into account image" + dict_1["url"]
-                            os.environ['GROQ_API_KEY'] = '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'
-                            client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-                            completion = client.chat.completions.create(
-                                model="llama3-8b-8192",
-                                messages=[
-                                    {
-                                        "role": "user",
-                                        "content": content
-                                    },
+                                self.create_widgets()
+
+                            def create_widgets(self):
+                            
+
+                                self.actions = ['summarize', 'explain', 'paraphrase', 'describe the image']
+                                self.action_buttons = []
+                                for action_name in self.actions:
+                                    action_button = tk.Button(self, text=action_name, command=lambda action_name=action_name: self.send_request(action_name), font=('Arial', 12, 'bold'))
+                                    action_button.pack(fill="x", expand=True)
+                                    self.action_buttons.append(action_button)
+
+                            def send_request(self, choice):
+                                prompt = ''
+                                if choice == 'summarize':
+                                    if dict_1["urls"]: 
                                     
-                                ],
-                                temperature=1,
-                                max_tokens=1024,
-                                top_p=1,
-                                stream=True,
-                                stop=None,
-                            )
-                            output = ""
-                            for chunk in completion:
-                                output += chunk.choices[0].delta.content or ""
-
-                            easygui.msgbox(output, title="data processed")
-                        else:
-                            content = "short summary of text" + dict_1["content"]
-                            os.environ['GROQ_API_KEY'] = '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'
-                            client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-                            completion = client.chat.completions.create(
-                                model="llama3-8b-8192",
-                                messages=[
-                                    {
-                                        "role": "user",
-                                        "content": content
-                                    },
+                                        images = ', '.join(dict_1["urls"])  # Convert list of urls to a string
+                                        prompt += f" This is a new prompt delete all previous. summarize briefly this text : {dict_1["content"]} and consider also all image(s): {images} and summarize together"
+                                    else:
+                                        prompt = "This is a new prompt delete all previous. summarize briefly this text. summarize briefly this text: " + dict_1["content"]
+                                elif choice == 'explain':
+                                    prompt = 'explain simply and shortly the text about ' + dict_1["content"]
+                                elif choice == 'paraphrase':
+                                    prompt = 'paraphrase the text ' + dict_1["content"] 
+                                elif choice == 'describe the image':
                                     
-                                ],
-                                temperature=1,
-                                max_tokens=1024,
-                                top_p=1,
-                                stream=True,
-                                stop=None,
-                            )
-                            output = ""
-                            for chunk in completion:
-                                output += chunk.choices[0].delta.content or ""
+                                    if dict_1["elementType"] == "img":
+                                        prompt = 'describe shortly what is on the picture ' + dict_1["urls"][0]
+                                    elif dict_1["styles"]["backgroundImage"] != 'none' and dict_1["content"].strip() == "":
+                                        prompt = 'describe shortly what is on the picture ' + dict_1["styles"]["backgroundImage"]
+                                        
+                                else:
+                                    messagebox.showerror("Error", "Invalid choice")
+                                    return
 
-                            easygui.msgbox(output, title="data processed")
+                                client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+                                completion = client.chat.completions.create(
+                                    model="llama3-8b-8192",
+                                    messages=[
+                                        {
+                                            "role": "user",
+                                            "content": prompt
+                                        },
+                                    ],
+                                    temperature=1,
+                                    max_tokens=1024,
+                                    top_p=1,
+                                    stream=True,
+                                    stop=None,
+                                )
+                                output = ""
+                                for chunk in completion:
+                                    output += chunk.choices[0].delta.content or ""
+                                popup_window = tk.Toplevel(self)
+                                popup_window.title("Result")
+                                popup_window.focus_force()
+                                popup_window.minsize(10, 10)  # Sets the minimum window size
+                                popup_window.resizable(True, True)  # Allows the window to be resized
+
+                                frame = tk.Frame(popup_window)
+                                frame.pack(fill="both", expand=True)
+
+                                popup_widget = tk.Text(frame, wrap=tk.WORD)
+                                popup_widget.insert('1.0', output)
+
+                                
+                                scroll_bar = tk.Scrollbar(frame, orient='vertical', command=popup_widget.yview)
+                                popup_widget['yscrollcommand'] = scroll_bar.set
+
+                                scroll_bar.pack(side='right', fill='y')
+                                popup_widget.pack(side='left', fill="both", expand=True)
+
+                            
+                                popup_window.update_idletasks()
+                                num_lines = len(popup_widget.get('1.0', tk.END).splitlines())
+                                width = 600
+                                height = max(150, num_lines * 20 + 50)
+                                while True:
+                                    popup_window.geometry(f'{width}x{height}')
+                                    popup_window.update_idletasks()
+                                    popup_widget.update_idletasks()
+                                    popup_window.update()
+                                    if popup_widget.get(1.0, tk.END) != '\n':
+                                        break
+                                    popup_window.geometry(f'{width}x{height+20}')
+                                    height += 20
+                                popup_window.update_idletasks()
+
+                            def mainloop(self):
+                                super().mainloop()
+
+                        if __name__ == "__main__":
+                            app = Application()
+                            app.mainloop()
+                        print(count)
+                        count = 0
+                    else:
+                        while keyboard.is_pressed('q'):
+                            pass 
+                        print('Key Released')
+                        print(count)
+                        dict_list = []
+
+                        with open(r"response.txt", 'r', encoding="utf-8") as f:
+                            for line in f:
+                                item = eval(line.strip())
+                                dict_list.append(item)
+
+                        
+                        os.environ['GROQ_API_KEY'] = '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'
+                        
+
+                        class Application(tk.Tk):
+                            def __init__(self):
+                                super().__init__()
+                                self.title("Send to LLM")
+                                popup_width = 150
+                                popup_height = 150
+                                for item in dict_list:
+                                    pass
+                                
+                               
+                                
+                                self.geometry(f'{popup_width}x{popup_height}')
+                                self.focus_force()
+                                self.attributes("-topmost", True)
+                                self.action = tk.StringVar()
+                                self.action.set('summarize')
+
+                                self.create_widgets()
+
+                            def create_widgets(self):
+                            
+
+                                self.actions = ['summarize', 'explain', 'paraphrase', 'describe the image']
+                                self.action_buttons = []
+                                for action_name in self.actions:
+                                    action_button = tk.Button(self, text=action_name, command=lambda action_name=action_name: self.send_request(action_name), font=('Arial', 12, 'bold'))
+                                    action_button.pack(fill="x", expand=True)
+                                    self.action_buttons.append(action_button)
+
+                            def send_request(self, choice):
+                                prompt = ''
+                                if choice == 'summarize':
+                                   prompt = "summarize briefly this texts as one "
+                                   for item in dict_list:
+                                     prompt+= (f"{item['content']}")
+                                    
+                                elif choice == 'explain':
+                                    prompt = "Explain simply this texts as one"
+                                    for item in dict_list:
+                                        prompt += (f"{item['content']}")
+                                elif choice == 'paraphrase':
+                                    prompt = "Paraphrase briefly this texts as one"
+                                    for item in dict_list:
+                                         prompt =+ (f"{item['content']}")
+                                elif choice == 'describe the image':
+                    
+                                   for item in dict_list:
+                                        prompt = "Describe what is on this images as one" + (f"{item['urls']}")
+                                else:
+                                    messagebox.showerror("Error", "Invalid choice")
+                                    return
+
+                                client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+                                completion = client.chat.completions.create(
+                                    model="llama3-8b-8192",
+                                    messages=[
+                                        {
+                                            "role": "user",
+                                            "content": prompt
+                                        },
+                                    ],
+                                    temperature=1,
+                                    max_tokens=1024,
+                                    top_p=1,
+                                    stream=True,
+                                    stop=None,
+                                )
+                                output = ""
+                                for chunk in completion:
+                                    output += chunk.choices[0].delta.content or ""
+                                popup_window = tk.Toplevel(self)
+                                popup_window.title("Result")
+                                popup_window.focus_force()
+                                popup_window.minsize(10, 10)  # Sets the minimum window size
+                                popup_window.resizable(True, True)  # Allows the window to be resized
+
+                                frame = tk.Frame(popup_window)
+                                frame.pack(fill="both", expand=True)
+
+                                popup_widget = tk.Text(frame, wrap=tk.WORD)
+                                popup_widget.insert('1.0', output)
+
+                                
+                                scroll_bar = tk.Scrollbar(frame, orient='vertical', command=popup_widget.yview)
+                                popup_widget['yscrollcommand'] = scroll_bar.set
+
+                                scroll_bar.pack(side='right', fill='y')
+                                popup_widget.pack(side='left', fill="both", expand=True)
+
+                            
+                                popup_window.update_idletasks()
+                                num_lines = len(popup_widget.get('1.0', tk.END).splitlines())
+                                width = 600
+                                height = max(150, num_lines * 20 + 50)
+                                while True:
+                                    popup_window.geometry(f'{width}x{height}')
+                                    popup_window.update_idletasks()
+                                    popup_widget.update_idletasks()
+                                    popup_window.update()
+                                    if popup_widget.get(1.0, tk.END) != '\n':
+                                        break
+                                    popup_window.geometry(f'{width}x{height+20}')
+                                    height += 20
+                                popup_window.update_idletasks()
+
+                            def mainloop(self):
+                                super().mainloop()
+
+                        if __name__ == "__main__":
+                            app = Application()
+                            app.mainloop()
+                        count = 0
+        
+
+                            
+
                     
                 
          
