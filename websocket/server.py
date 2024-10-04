@@ -209,22 +209,15 @@ async def eyetracking_running(websocket, path):
                             def send_request(self, choice):
                                 prompt = ''
                                 if choice == 'summarize':
-                                    if dict_1["urls"]: 
-                                    
-                                        images = ', '.join(dict_1["urls"])  # Convert list of urls to a string
-                                        prompt += f" This is a new prompt delete all previous. summarize briefly this text : {dict_1["content"]} and consider also all image(s): {images} and summarize together"
-                                    else:
-                                        prompt = "This is a new prompt delete all previous. summarize briefly this text. summarize briefly this text: " + dict_1["content"]
+                                    prompt += f" I will give  you some webpage element, please help me to summarize the content of element if the element type is div or pharagraph also consider the images inside these elements if they have it, and summarize together with the image() . Do not need to show the element type, just give me summary of both the content and images in no more than 5 sentences." + dict_1["content"] + ', '.join(dict_1["urls"])
+                                   
                                 elif choice == 'explain':
                                     prompt = 'explain simply and shortly the text about ' + dict_1["content"]
                                 elif choice == 'paraphrase':
                                     prompt = 'paraphrase the text ' + dict_1["content"] 
                                 elif choice == 'describe the image':
                                     
-                                    if dict_1["elementType"] == "img":
-                                        prompt = 'describe shortly what is on the picture ' + dict_1["urls"][0]
-                                    elif dict_1["styles"]["backgroundImage"] != 'none' and dict_1["content"].strip() == "":
-                                        prompt = 'describe shortly what is on the picture ' + dict_1["styles"]["backgroundImage"]
+                                    prompt = "describe the image in given url if elementType is img, or decribe url what is on background image if it is not empty, but content is empty.Do not show the urls in output message. Just Give me desciption what is on image" + ', '.join(dict_1["urls"])
                                         
                                 else:
                                     messagebox.showerror("Error", "Invalid choice")
@@ -339,22 +332,22 @@ async def eyetracking_running(websocket, path):
                             def send_request(self, choice):
                                 prompt = ''
                                 if choice == 'summarize':
-                                   prompt = "summarize briefly this texts as one "
-                                   for item in dict_list:
-                                     prompt+= (f"{item['content']}")
-                                    
-                                elif choice == 'explain':
-                                    prompt = "Explain simply this texts as one"
+                                    prompt = "I will give you some webpage elements, please help me to summarize the content of element if the element type is div or pharagraph also consider the images inside these elements if they have it, and describe the image in given url if element type is img. Do not need to show the element type, just give me summary of both the content and images in no more than 5 sentences."
                                     for item in dict_list:
-                                        prompt += (f"{item['content']}")
+                                        prompt += f"{item}"
+                                elif choice == 'explain':
+                                    prompt = "I will give you some webpage elements, please help me to explain the content of element(s) if the element type is div or paragraph, and explain also the image in given url(s) . Do not need to show the element type, just give me explanation of both the content and images in no more than 5 sentences."
+                                    for item in dict_list:
+                                        prompt += f"{item}"
                                 elif choice == 'paraphrase':
                                     prompt = "Paraphrase briefly this texts as one"
                                     for item in dict_list:
                                          prompt =+ (f"{item['content']}")
                                 elif choice == 'describe the image':
-                    
-                                   for item in dict_list:
-                                        prompt = "Describe what is on this images as one" + (f"{item['urls']}")
+
+                                    prompt = "I will give you some webpage elements, please help me to describe what is on image ,or all of multiple images if there is many images, in given url(s) if element type is img or also describe the url of background image if i is not empty, but content shoul be empty. Do not need to show the content, element type,urls, borderX and other unnecessary technical details from the file, just give me description of  images for simple user "
+                                    for item in dict_list:
+                                         prompt += f"{item}"
                                 else:
                                     messagebox.showerror("Error", "Invalid choice")
                                     return
