@@ -134,7 +134,7 @@ function drawCircle(viewportX, viewportY) {
     canvas.height = circleRadius * 2;
 
     // Set the position of the canvas
-    canvas.style.position = 'absolute';
+    canvas.style.position = 'fixed';
     canvas.style.left = `${viewportX - circleRadius}px`; // Center the circle
     canvas.style.top = `${viewportY - circleRadius}px`; // Center the circle
     canvas.style.pointerEvents = 'none'; // Make sure the canvas doesn't block clicks
