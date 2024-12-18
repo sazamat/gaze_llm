@@ -1,10 +1,14 @@
+
+
 //
 // SOCKET TO CONNECT WITH SERVER
 //
 
-var hightlightslow = 100
+var hightlightslow = 100    //Hz
 // Establish WebSocket connection
 var socket = new WebSocket('ws://localhost:8080');
+
+var SELECT_ELEMENT_THRESHOLD = 0.6
 
 // Event: WebSocket connection opened
 socket.onopen = function(event) {
@@ -22,7 +26,7 @@ socket.onclose = function(event) {
 };
 
 // Function to send message to WebSocket server
-function sendMessageToServer(content, urls, elementType, styles, borderX,borderY) {
+function sendMessageToServer(content, urls, elementType, styles, borderX,borderY, check_selected) {
     if (socket.readyState === WebSocket.OPEN) {
         // Create a message object containing content, URL, and element type
         var message = {
@@ -32,6 +36,8 @@ function sendMessageToServer(content, urls, elementType, styles, borderX,borderY
             styles: styles,
             borderX: borderX,
             borderY:borderY,
+            check_selected: check_selected,
+            
         };
 
         // Convert the message object to JSON
@@ -62,7 +68,6 @@ function getViewportFromScreenCoordinate(screenX, screenY){
 
 function getElementFromScreenCoordinates(viewportX, viewportY) {
     
-
     // Use the adjusted coordinates to determine the element at that point
     var element = document.elementFromPoint(viewportX, viewportY);
 	
@@ -129,9 +134,9 @@ function drawCircle(viewportX, viewportY) {
     const context = canvas.getContext('2d');
 
     // Set the size of the canvas
-    const circleRadius = 10; // Adjust the radius as needed
-    canvas.width = circleRadius * 2;
-    canvas.height = circleRadius * 2;
+    const circleRadius = 3; // Adjust the radius as needed
+    canvas.width = circleRadius * 4;
+    canvas.height = circleRadius * 4;
 
     // Set the position of the canvas
     canvas.style.position = 'fixed';
@@ -158,6 +163,34 @@ var previousElement = null;
 var count = 0;
 var selectedElement = null;
 
+class Queue {
+    constructor() {
+        this.items = [];
+    }
+
+    enqueue(element) {
+        this.items.push(element);
+    }
+
+    dequeue() {
+        if (this.items.length > 0) {
+            return this.items.shift();
+        }
+    }
+
+    countOccurrences(element) {
+        let count = 0;
+        for (let i = 0; i < this.items.length; i++) {
+            if (this.items[i] === element) {
+                count++;
+            }
+        }
+        return count;
+    }
+}
+
+ 
+const queue = new Queue(); 
 // Function to handle messages received from the WebSocket server
 socket.onmessage = function(event) {
     // Parse the message received from the server
@@ -168,27 +201,58 @@ socket.onmessage = function(event) {
     var screenY = data.gazeY;
 	var { viewportX, viewportY } = getViewportFromScreenCoordinate(screenX, screenY)
 
-    drawCircle(screenX, screenY);
+    //drawCircle(viewportX, viewportY);
 
 	// Get the element at the specified screen coordinates
+    
     var element = getElementFromScreenCoordinates(viewportX, viewportY);
-   
+
+    
+    
+   var check_selected = 0;
 	//sendMessageToServer(mappedX, mappedY, "");
     if (element) {
         // Remove outline from the previously selected element
+        
         if (previousElement) {
-            previousElement.style.outline = '';
-            if (element === previousElement){
-                 // Get the content of the element
-                 count = count + 1;
+            
+            previousElement.style.border = '';
+            
+            // Apply highlight effect to the new element
+            // if (count > hightlightslow){
+            //     count = 0;
+            //     selectedElement = element
+            // }
+            
+            if (queue.items.length < 150) 
+                {   
+                    queue.enqueue(element)
+                }
+            else{
+                queue.dequeue()
+                queue.enqueue(element)
+                count = queue.countOccurrences(element)
+                if (count > 150*SELECT_ELEMENT_THRESHOLD) {
+                    selectedElement = element  
+                    check_selected = 1            
+                }
+                else{
+                    selectedElement = null
+                    check_selected = 0
+    
+                }
             }
+            if (selectedElement){
+                selectedElement.style.border = '2px solid red';
+                
+            }
+            
             var content = element.innerText || element.textContent;
 
             // Get the type of element (tag name)
             var elementType = element.tagName.toLowerCase();
             
         
-
             // Get computed styles
             var computedStyles = window.getComputedStyle(element);
             var styles = {
@@ -197,51 +261,45 @@ socket.onmessage = function(event) {
             var borderX = element.getBoundingClientRect().left + window.screenLeft + (window.outerWidth - window.innerWidth);
             var borderY = element.getBoundingClientRect().top + window.screenTop + (chromeHeight = window.outerHeight - window.innerHeight);
             var urls = [];
-          
+        
             if (elementType === 'img') {
                 urls.push(element.src);
 
-                sendMessageToServer(element.alt, urls, elementType, styles, borderX,borderY);    
+                sendMessageToServer(element.alt, urls, elementType, styles, borderX,borderY,check_selected);    
             } 
             else if (elementType === 'a') {
-                sendMessageToServer(content, element.href, elementType,styles, borderX,borderY);
+                sendMessageToServer(content, element.href, elementType,styles, borderX,borderY,check_selected);
             } 
             else {
             
                     
                 
                 for (const child of element.children) {
-                    if (element.children.length > 0 && child.tagName.toLowerCase() === "img"){
+                    if (child.tagName.toLowerCase() === "img"){
                         
                         urls.push(child.src)
-                        sendMessageToServer(content, urls, elementType, styles,borderX,borderY);
                         }
-                       
-                       
-                  }
+                        
+                    
+                    
+                }
                 
-                  sendMessageToServer(content, urls, elementType, styles,borderX,borderY);
+                sendMessageToServer(content, urls, elementType, styles,borderX,borderY, check_selected);
             }
-            if (selectedElement === element){
-                element.style.outline = '2px solid red';
-            }
-            else{
-                selectedElement = null
-            }
-            // Apply highlight effect to the new element
-            if (count > hightlightslow){
-                count = 0;
-                selectedElement = element
-            }
-
+                
+                
+            
+            
             // Update the reference to the previously selected element
             previousElement = element;
             
+            
         }
           
-
+        
         if (!previousElement)
         {
+            
              // Get the content of the element
         var content = element.innerText || element.textContent;
 
@@ -254,37 +312,38 @@ socket.onmessage = function(event) {
        var styles = {
         backgroundImage: computedStyles.getPropertyValue("background-image")
          };
-   
+         var borderX = element.getBoundingClientRect().left + window.screenLeft + (window.outerWidth - window.innerWidth);
+         var borderY = element.getBoundingClientRect().top + window.screenTop + (chromeHeight = window.outerHeight - window.innerHeight);
 
         // Send relevant information to the server
         if (elementType === 'img') {
 
           if (element.parentElement.tagName.toLowerCase() === 'p') {
-             sendMessageToServer(element.parentElement.innerText, element.src, elementType + " " + element.parentElement.elementType,borderX,borderY);
+             sendMessageToServer(element.parentElement.innerText, element.src, elementType + " " + element.parentElement.elementType,styles,borderX,borderY, check_selected);
           }
-            sendMessageToServer(element.alt, element.src, elementType,borderX,borderY);    
+            sendMessageToServer(element.alt, element.src, elementType,styles,borderX,borderY, check_selected);    
         } 
         else if (elementType === 'a') {
-            sendMessageToServer(content, element.href, elementType, borderX,borderY);
+            sendMessageToServer(content, element.href, elementType,styles, borderX,borderY, check_selected);
         } 
         else {
             if (element.querySelector('img')){
-                sendMessageToServer(content, element.querySelector('img').src, elementType, styles,borderX,borderY);
+                sendMessageToServer(element.alt, element.querySelector('img').src, elementType, styles,borderX,borderY, check_selected);
             }
             
-            sendMessageToServer(content, '', elementType, styles, borderX,borderY);
+            sendMessageToServer(content, '', elementType, styles, borderX,borderY, check_selected);
 
         }
 
         // Apply highlight effect to the new element
         //element.style.outline = '2px solid red';
         }
-        
+
         // Update the reference to the previously selected element
         previousElement = element;
     }
 	else{
-		sendMessageToServer("","","", "",screenX, screenY, );
+		sendMessageToServer("","","", "",screenX, screenY, "" );
 	}
 };
 
